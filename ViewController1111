@@ -23,6 +23,8 @@ class ViewController: UIViewController, UITextFieldDelegate
     var doubleFadeOut = Double()
     var doubleZoomOut = Double()
     var timer = NSTimer()
+    var isFadeIn = false
+    var isFadeOut = false
     
     override func viewDidLoad()
     {
@@ -34,6 +36,9 @@ class ViewController: UIViewController, UITextFieldDelegate
         let url = NSURL(string: "http://jplayer.org/video/m4v/Big_Buck_Bunny_Trailer.m4v")
         player = AVPlayer(URL: url!)
         
+        // create notification center for called when finish the video
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(ViewController.playerDidFinishPlaying(_:)), name: AVPlayerItemDidPlayToEndTimeNotification, object: player.currentItem)
+        
         playerViewController = AVPlayerViewController()
         playerViewController.player = player
         
@@ -44,6 +49,12 @@ class ViewController: UIViewController, UITextFieldDelegate
         // Add tap gesture
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(ViewController.handleTap(_:)))
         self.view.addGestureRecognizer(tapGesture)
+    }
+    
+    // MARK: Functions
+    func playerDidFinishPlaying(note: NSNotification)
+    {
+        timer.invalidate()
     }
     
     // Call method of tap gesture
@@ -98,25 +109,36 @@ class ViewController: UIViewController, UITextFieldDelegate
     // Must be internal or public.
     func update()
     {
-       print(player.currentTime().seconds)
+        print(player.currentTime().seconds)
         
         if(player.currentTime().seconds > doubleFadeOut)
         {
             // Fade out
-            UIView.animateWithDuration(1.0, delay: doubleFadeOut, options: UIViewAnimationOptions.CurveEaseIn, animations: {
-                self.playerViewController.view.alpha = 0.0
-                }, completion: nil)
+            if(isFadeOut == false)
+            {
+                isFadeOut = true
+                UIView.animateWithDuration(1.0, delay: 0.0, options: UIViewAnimationOptions.CurveEaseIn, animations: {
+                    self.playerViewController.view.alpha = 0.0
+                    }, completion: nil)
+                return
+            }
         }
         
         if(player.currentTime().seconds > doubleFadeIn)
         {
             // Fade in
-            UIView.animateWithDuration(1.0, delay: (self.doubleFadeIn - self.doubleFadeOut), options: UIViewAnimationOptions.CurveEaseOut, animations: {
-                self.playerViewController.view.alpha = 1.0
-                }, completion: nil)
+            if(isFadeIn == false)
+            {
+                isFadeIn = true
+                UIView.animateWithDuration(1.0, delay: 0.0, options: UIViewAnimationOptions.CurveEaseOut, animations: {
+                    self.playerViewController.view.alpha = 1.0
+                    }, completion: nil)
+                return
+            }
         }
     }
-
+    
+    // MARK: IBActions
     @IBAction func btnApply(sender: AnyObject)
     {
         if(!checkValidation())
@@ -126,25 +148,13 @@ class ViewController: UIViewController, UITextFieldDelegate
         handleTap(UITapGestureRecognizer())
         
         // start video
+        isFadeOut = false
+        isFadeIn = false
         self.playerViewController.view.alpha = 1.0
         player.play()
         
-        doubleFadeIn = Double(txtFadeIn.text!)!
-        doubleFadeOut = Double(txtFadeOut.text!)!
-        doubleZoomOut = Double(txtZoomOut.text!)!
-        
+        timer.invalidate()
         timer = NSTimer.scheduledTimerWithTimeInterval(1.0, target: self, selector: #selector(ViewController.update), userInfo: nil, repeats: true)
-        
-        // Fade out
-        UIView.animateWithDuration(1.0, delay: doubleFadeOut, options: UIViewAnimationOptions.CurveEaseIn, animations: {
-            self.playerViewController.view.alpha = 0.0
-            }, completion: { (finished) -> Void in
-                
-                // Fade in
-                UIView.animateWithDuration(1.0, delay: (self.doubleFadeIn - self.doubleFadeOut), options: UIViewAnimationOptions.CurveEaseOut, animations: {
-                    self.playerViewController.view.alpha = 1.0
-                    }, completion: nil)
-        })
     }
     
     @IBAction func btnInputDone(sender: AnyObject)
