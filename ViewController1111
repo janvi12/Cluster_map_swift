@@ -98,9 +98,23 @@ class ViewController: UIViewController, UITextFieldDelegate
     // Must be internal or public.
     func update()
     {
-        print(player.currentTime().seconds)
+       print(player.currentTime().seconds)
         
+        if(player.currentTime().seconds > doubleFadeOut)
+        {
+            // Fade out
+            UIView.animateWithDuration(1.0, delay: doubleFadeOut, options: UIViewAnimationOptions.CurveEaseIn, animations: {
+                self.playerViewController.view.alpha = 0.0
+                }, completion: nil)
+        }
         
+        if(player.currentTime().seconds > doubleFadeIn)
+        {
+            // Fade in
+            UIView.animateWithDuration(1.0, delay: (self.doubleFadeIn - self.doubleFadeOut), options: UIViewAnimationOptions.CurveEaseOut, animations: {
+                self.playerViewController.view.alpha = 1.0
+                }, completion: nil)
+        }
     }
 
     @IBAction func btnApply(sender: AnyObject)
@@ -120,6 +134,17 @@ class ViewController: UIViewController, UITextFieldDelegate
         doubleZoomOut = Double(txtZoomOut.text!)!
         
         timer = NSTimer.scheduledTimerWithTimeInterval(1.0, target: self, selector: #selector(ViewController.update), userInfo: nil, repeats: true)
+        
+        // Fade out
+        UIView.animateWithDuration(1.0, delay: doubleFadeOut, options: UIViewAnimationOptions.CurveEaseIn, animations: {
+            self.playerViewController.view.alpha = 0.0
+            }, completion: { (finished) -> Void in
+                
+                // Fade in
+                UIView.animateWithDuration(1.0, delay: (self.doubleFadeIn - self.doubleFadeOut), options: UIViewAnimationOptions.CurveEaseOut, animations: {
+                    self.playerViewController.view.alpha = 1.0
+                    }, completion: nil)
+        })
     }
     
     @IBAction func btnInputDone(sender: AnyObject)
