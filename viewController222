@@ -1,0 +1,213 @@
+//
+//  ViewController.swift
+//  videoDemo
+//
+//  Created by Harshul Shah on 03/08/17.
+//  Copyright © 2017 Harshul Shah. All rights reserved.
+//
+
+import UIKit
+import AVKit
+import AVFoundation
+
+class ViewController: UIViewController, UITextFieldDelegate
+{
+    @IBOutlet var scrollView: UIScrollView!
+    @IBOutlet var txtFadeIn: UITextField!
+    @IBOutlet var txtFadeOut: UITextField!
+    @IBOutlet var txtZoomOut: UITextField!
+    @IBOutlet var viewInput: UIView!
+    @IBOutlet var viewSubview: UIView!
+    var player = AVPlayer()
+    var playerViewController = AVPlayerViewController()
+    var playerLayer = AVPlayerLayer()
+    var doubleFadeIn = Double()
+    var doubleFadeOut = Double()
+    var doubleZoomOut = Double()
+    var timer = NSTimer()
+    var isFadeIn = false
+    var isFadeOut = false
+    
+    override func viewDidLoad()
+    {
+        super.viewDidLoad()
+        // Do any additional setup after loading the view, typically from a nib.
+        
+       // view.translatesAutoresizingMaskIntoConstraints = false
+        
+        
+        let url = NSURL(string: "http://jplayer.org/video/m4v/Big_Buck_Bunny_Trailer.m4v")
+        player = AVPlayer(URL: url!)
+        
+        // create notification center for called when finish the video
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(ViewController.playerDidFinishPlaying(_:)), name: AVPlayerItemDidPlayToEndTimeNotification, object: player.currentItem)
+        
+        // Layer for display… Video plays at the full size of the iPad        
+       /*playerLayer = AVPlayerLayer(player: player)
+        let view = UIView(frame: CGRectMake(0, 50, 320, 200))
+        self.scrollView.layer.addSublayer(playerLayer)
+        playerLayer.frame = view.bounds*/
+        
+        viewSubview.hidden = true
+        playerViewController = AVPlayerViewController()
+        playerViewController.player = player
+        playerViewController.contentOverlayView?.addSubview(playerViewController.view)
+        
+        playerViewController.view.frame = CGRectMake(0, 50, 320, 200)
+        self.scrollView.addSubview(playerViewController.view)
+        self.addChildViewController(playerViewController)
+        
+        // Add tap gesture
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(ViewController.handleTap(_:)))
+        self.view.addGestureRecognizer(tapGesture)
+    }
+    
+    // MARK: Functions
+    func playerDidFinishPlaying(note: NSNotification)
+    {
+        timer.invalidate()
+    }
+    
+    // Call method of tap gesture
+    func handleTap(gestureRecognizer: UITapGestureRecognizer)
+    {
+        self.view.endEditing(true)
+        scrollView.contentSize = CGSizeMake(UIScreen.mainScreen().bounds.width, 460)
+    }
+    
+    // Check validation
+    func checkValidation() -> Bool
+    {
+        let strFadeIn = txtFadeIn.text?.trim()
+        let strFadeOut = txtFadeOut.text?.trim()
+        let strZoomOut = txtZoomOut.text?.trim()
+        if(txtFadeIn.text?.characters.count == 0 || strFadeIn?.characters.count == 0)
+        {
+            showValidationAlert("Please enter fade in value")
+            return false
+        }
+        if(txtFadeOut.text?.characters.count == 0 || strFadeOut?.characters.count == 0)
+        {
+            showValidationAlert("Please enter fade out value")
+            
+            return false
+        }
+        if(txtFadeOut.text?.characters.count == 0 || strZoomOut?.characters.count == 0)
+        {
+            showValidationAlert("Please enter zoom out value")
+            return false
+        }
+        doubleFadeIn = Double(txtFadeIn.text!)!
+        doubleFadeOut = Double(txtFadeOut.text!)!
+        
+        if(doubleFadeIn < doubleFadeOut)
+        {
+            showValidationAlert("Fade in value must greater than fade out value")
+            return false
+        }
+        return true
+    }
+    
+    // show alert
+    func showValidationAlert(message: String)
+    {
+        let alert = UIAlertController(title: "", message: message, preferredStyle: UIAlertControllerStyle.Alert)
+        alert.addAction(UIAlertAction(title: "Ok", style: UIAlertActionStyle.Default, handler: nil))
+        self.presentViewController(alert, animated: true, completion: nil)
+    }
+    
+    // Must be internal or public.
+    func update()
+    {
+        print(player.currentTime().seconds)
+        
+        if(player.currentTime().seconds > doubleFadeOut)
+        {
+            // Fade out
+            if(isFadeOut == false)
+            {
+                isFadeOut = true
+                UIView.animateWithDuration(1.0, delay: 0.0, options: UIViewAnimationOptions.CurveEaseIn, animations: {
+                    //self.playerViewController.view.alpha = 0.0
+                    // player.animationDidStart()
+                    //self.playerLayer.frame = CGRectZero
+                    //self.playerLayer.removeAllAnimations()
+                   // self.playerViewController.view.addSubview(self.viewSubview)
+                    self.playerViewController.contentOverlayView?.addSubview(self.viewSubview)
+                    self.viewSubview.hidden = false
+                   // self.playerViewController.showsPlaybackControls = true
+                    }, completion: nil)
+                return
+            }
+        }
+        
+        if(player.currentTime().seconds > doubleFadeIn)
+        {
+            // Fade in
+            if(isFadeIn == false)
+            {
+                isFadeIn = true
+                UIView.animateWithDuration(1.0, delay: 0.0, options: UIViewAnimationOptions.CurveEaseOut, animations: {
+                    //self.playerViewController.view.alpha = 1.0
+                    self.playerViewController.contentOverlayView?.removeFromSuperview()
+                    self.viewSubview.hidden = true
+                    }, completion: nil)
+                return
+            }
+        }
+    }
+    
+    // MARK: IBActions
+    @IBAction func btnApply(sender: AnyObject)
+    {
+        if(!checkValidation())
+        {
+            return
+        }
+        handleTap(UITapGestureRecognizer())
+        
+        // start video
+        isFadeOut = false
+        isFadeIn = false
+        self.playerViewController.view.alpha = 1.0
+        player.play()
+        
+        timer.invalidate()
+        timer = NSTimer.scheduledTimerWithTimeInterval(1.0, target: self, selector: #selector(ViewController.update), userInfo: nil, repeats: true)
+    }
+    
+    @IBAction func btnInputDone(sender: AnyObject)
+    {
+        handleTap(UITapGestureRecognizer())
+    }
+    
+    // MARK: UITextFieldDelegate
+    func textFieldDidBeginEditing(textField: UITextField)
+    {
+        textField.inputAccessoryView = viewInput
+        scrollView.contentSize = CGSizeMake(UIScreen.mainScreen().bounds.width, UIScreen.mainScreen().bounds.height+240)
+        let bottomOffset = CGPoint(x: 0, y: scrollView.contentSize.height - scrollView.bounds.size.height - 60)
+        scrollView.setContentOffset(bottomOffset, animated: true)
+    }
+    
+    func textFieldShouldReturn(textField: UITextField) -> Bool
+    {
+        handleTap(UITapGestureRecognizer())
+        return true
+    }
+    
+    override func didReceiveMemoryWarning()
+    {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+}
+
+// Trip strings
+extension String
+{
+    func trim() -> String
+    {
+        return self.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet())
+    }
+}
